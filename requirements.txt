@@ -1,6 +1,7 @@
 ultralytics
 opencv-python
 fastapi
-"uvicorn[standard]"
+uvicorn[standard]
 python-multipart
 pillow
+fastapi[standard]

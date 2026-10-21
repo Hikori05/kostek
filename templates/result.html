@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Wynik przetwarzania{% endblock %}
+
+{% block content %}
+    <h1>Przetworzony obraz</h1>
+    <p>Obraz odebrany i zwrócony bezpośrednio z pamięci RAM:</p>
+
+    <img src="data:{{ mime_type }};base64,{{ image_base64 }}"
+         alt="Przetworzony obraz"
+         class="image-preview">
+
+    <div>
+        <a href="/" class="btn">Wróć na stronę główną</a>
+    </div>
+{% endblock %}
