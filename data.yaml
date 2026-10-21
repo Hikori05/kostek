@@ -1,0 +1,8 @@
+path: dataset/
+train: images/train
+val: images/val
+
+kpt_shape: [4, 3]      # 4 punkty, każdy x, y, widoczność
+flip_idx: [0, 1, 2, 3]
+names:
+  0: bone
