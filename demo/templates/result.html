@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Wynik przetwarzania{% endblock %}
+
+{% block content %}
+    <style>
+        .points-table { border-collapse: collapse; margin: 1rem 0; }
+        .points-table th, .points-table td {
+            border: 1px solid rgba(128, 128, 128, 0.45);
+            padding: 0.4rem 0.9rem;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .points-table th:first-child, .points-table td:first-child { text-align: left; }
+        .points-note { opacity: 0.7; font-size: 0.9rem; }
+    </style>
+
+    <h1>Przetworzony obraz</h1>
+
+    <img src="data:{{ mime_type }};base64,{{ image_base64 }}"
+         alt="Przetworzony obraz"
+         class="image-preview">
+
+    {% if points %}
+        <h2>Współrzędne punktów</h2>
+        <table class="points-table">
+            <thead>
+                <tr>
+                    <th>Punkt</th>
+                    <th>X [px]</th>
+                    <th>Y [px]</th>
+                    {% if has_conf %}<th>Pewność</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in points %}
+                <tr>
+                    <td>{{ p.name }}</td>
+                    <td>{{ p.x }}</td>
+                    <td>{{ p.y }}</td>
+                    {% if has_conf %}
+                        <td>{% if p.conf is not none %}{{ p.conf }} %{% else %}–{% endif %}</td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p class="points-note">
+            Piksele względem oryginalnego obrazu ({{ width }} × {{ height }} px),
+            (0, 0) to lewy górny róg, Y rośnie w dół.
+        </p>
+    {% else %}
+        <p>Nie wykryto punktów na tym obrazie.</p>
+    {% endif %}
+
+    <div>
+        <a href="/" class="btn">Wróć na stronę główną</a>
+    </div>
+{% endblock %}

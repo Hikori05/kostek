@@ -1,0 +1,1 @@
+python bench.py --weights ./models/kostek-v3s.pt --images bench/img --csv ./bench/dat.csv --save-vis bench/

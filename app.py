@@ -1,6 +1,5 @@
 import base64
 import io
-import math
 
 from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.responses import HTMLResponse
@@ -9,7 +8,10 @@ from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from ultralytics.models.yolo.model import YOLO
 
-model = YOLO("./runs/pose/lines/weights/best.pt")
+# Ustaw tak samo jak imgsz użyty przy treningu (domyślne 640 psuje dokładność punktów)
+IMGSZ = 800
+
+model = YOLO("./models/kostek-v3s.pt")
 
 app = FastAPI()
 
@@ -26,12 +28,6 @@ NAMES = [
 ]
 
 
-def tpa(p):
-    a_axis = math.atan2(p[1][1] - p[0][1], p[1][0] - p[0][0])
-    a_plat = math.atan2(p[3][1] - p[2][1], p[3][0] - p[2][0])
-    return math.degrees(a_plat - a_axis) % 180 - 90
-
-
 def get_font(size):
     for path in ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "DejaVuSans.ttf", "arial.ttf"):
         try:
@@ -39,6 +35,7 @@ def get_font(size):
         except OSError:
             continue
     return ImageFont.load_default()  # awaryjnie: polskie znaki mogą się nie wyświetlić
+
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -64,17 +61,31 @@ async def handle_form(request: Request, file: UploadFile = File(...)):
     input_image = ImageOps.exif_transpose(Image.open(io.BytesIO(contents))).convert("RGB")
 
     # 3. Przekazanie obrazu do YOLO
-    results = model(input_image)
+    results = model(input_image, imgsz=IMGSZ, verbose=False)
     r = results[0]
 
-    # 4. Rysowanie punktów, linii, nazw i kąta TPA na kopii obrazu
+    # 4. Rysowanie punktów, linii i nazw na kopii obrazu + zebranie współrzędnych do tabeli
     annotated_image = input_image.copy()
-    tpa_value = None
+    points = []
 
     if r.keypoints is not None and len(r.keypoints.xy) > 0:
-        p = r.keypoints.xy[0].tolist()
-        pts = [(x, y) for x, y in p]
-        tpa_value = tpa(p)
+        xy = r.keypoints.xy[0].tolist()
+        confs = (
+            r.keypoints.conf[0].tolist()
+            if r.keypoints.conf is not None
+            else [None] * len(xy)
+        )
+        pts = [(x, y) for x, y in xy]
+
+        points = [
+            {
+                "name": name,
+                "x": round(x, 1),
+                "y": round(y, 1),
+                "conf": None if c is None else round(c * 100),
+            }
+            for name, (x, y), c in zip(NAMES, pts, confs)
+        ]
 
         draw = ImageDraw.Draw(annotated_image)
         s = max(2, annotated_image.width // 300)               # grubość linii
@@ -88,9 +99,6 @@ async def handle_form(request: Request, file: UploadFile = File(...)):
             draw.ellipse([x - rad, y - rad, x + rad, y + rad], fill=(255, 0, 0))
             draw.text((x + rad + 6, y - rad), name, font=font, fill=(255, 255, 255),
                       stroke_width=2, stroke_fill=(0, 0, 0))
-
-        draw.text((20, 20), f"TPA: {tpa_value:.1f}°", font=font, fill=(255, 255, 255),
-                  stroke_width=2, stroke_fill=(0, 0, 0))
 
     # 5. Zapisanie obrazu do bufora w pamięci RAM
     buffer = io.BytesIO()
@@ -106,6 +114,10 @@ async def handle_form(request: Request, file: UploadFile = File(...)):
         name="result.html",
         context={
             "image_base64": encoded_string,
-            "tpa": f"{tpa_value:.1f}" if tpa_value is not None else None,
+            "mime_type": "image/jpeg",
+            "points": points,
+            "has_conf": any(p["conf"] is not None for p in points),
+            "width": input_image.width,
+            "height": input_image.height,
         },
     )

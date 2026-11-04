@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Prześlij zdjęcie{% endblock %}
+
+{% block content %}
+    <h1>Wyślij obraz do przetworzenia</h1>
+    <form action="/api/submit" method="post" enctype="multipart/form-data" class="upload-box">
+        <input type="file" name="file" accept="image/*" required>
+        <button type="submit">Przetwórz w pamięci</button>
+    </form>
+{% endblock %}
