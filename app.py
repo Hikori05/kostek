@@ -9,9 +9,9 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 from ultralytics.models.yolo.model import YOLO
 
 # Ustaw tak samo jak imgsz użyty przy treningu (domyślne 640 psuje dokładność punktów)
-IMGSZ = 800
+IMGSZ = 1024
 
-model = YOLO("./models/kostek-v3s.pt")
+model = YOLO("./models/best.pt")
 
 app = FastAPI()
 
