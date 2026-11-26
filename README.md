@@ -16,63 +16,104 @@ Aplikacja webowa (FastAPI) oraz zestaw narzędzi ML do automatycznego wykrywania
 
 ---
 
+## Jak uruchomić demo
+
+W katalogu `demo/` znajduje się samodzielna wersja demonstracyjna oparta o **ONNX Runtime** – nie wymaga karty graficznej ani instalowania ciężkich bibliotek treningowych (PyTorch / Ultralytics).
+
+### Wymagania wstępne
+- **Python 3.10** lub nowszy zainstalowany w systemie.
+  - *Linux (Debian / Ubuntu / Mint / Pop!_OS):* upewnij się, że masz pakiet `venv`: `sudo apt install python3-venv`
+  - *Windows:* podczas instalacji Pythona z [python.org](https://www.python.org/downloads/) zaznacz opcję **„Add python.exe to PATH”**.
+
+### Krok 1: Pobranie projektu i wejście do katalogu `demo`
+
+```bash
+git clone https://github.com/Hikori05/kostek.git
+cd kostek/demo
+```
+
+*(Jeśli masz już pobraną paczkę ZIP z projektem, rozpakuj ją i otwórz terminal w folderze `demo`).*
+
+### Krok 2: Jednorazowa instalacja środowiska (`setup`)
+
+Skrypt automatycznie utworzy lokalne środowisko wirtualne `.venv` i zainstaluje wymagane pakiety z `demo/requirements.txt`.
+
+- **Linux / macOS:**
+  ```bash
+  bash setup.sh
+  ```
+- **Windows (PowerShell):**
+  ```powershell
+  .\setup.bat
+  ```
+- **Windows (Wiersz polecenia CMD lub Eksplorator plików):**
+  ```bat
+  setup.bat
+  ```
+  *(możesz też po prostu kliknąć dwukrotnie plik `setup.bat` w folderze `demo`).*
+
+### Krok 3: Uruchomienie serwera aplikacji (`run`)
+
+Po zakończeniu instalacji uruchom serwer (przy kolejnych uruchomieniach wykonujesz już tylko ten krok):
+
+- **Linux / macOS:**
+  ```bash
+  bash run.sh
+  ```
+- **Windows (PowerShell):**
+  ```powershell
+  .\run.bat
+  ```
+- **Windows (CMD / Eksplorator plików):**
+  ```bat
+  run.bat
+  ```
+
+### Krok 4: Korzystanie z aplikacji w przeglądarce
+
+1. Po pojawieniu się komunikatu `Uvicorn running on http://127.0.0.1:8000` otwórz w przeglądarce adres:
+   **http://127.0.0.1:8000**
+2. Kliknij wybór pliku i wskaż zdjęcie RTG kości piszczelowej (np. `.png`, `.jpg`).
+3. Kliknij przycisk **„Przetwórz w pamięci”**.
+4. Aplikacja wyświetli:
+   - zdjęcie z naniesionymi punktami `P1`–`P4`, osią piszczeli (`P1`–`P2`, żółta) oraz linią plateau (`P3`–`P4`, zielona),
+   - tabelę z dokładnymi współrzędnymi `X [px]`, `Y [px]` względem oryginalnej rozdzielczości oraz pewnością detekcji (`%`).
+5. Aby zatrzymać serwer, naciśnij `Ctrl + C` w oknie terminala.
+
+> **Opcjonalna konfiguracja (zmiana portu, hosta lub wersji Pythona):**
+> - Zmiana adresu/portu na Linux / macOS: `APP_HOST=0.0.0.0 APP_PORT=9000 bash run.sh`
+> - Zmiana adresu/portu na Windows (PowerShell): `$env:APP_HOST="0.0.0.0"; $env:APP_PORT="9000"; .\run.bat`
+> - Zmiana adresu/portu na Windows (CMD): `set APP_HOST=0.0.0.0 & set APP_PORT=9000 & run.bat`
+> - Wymuszenie konkretnego interpretera podczas instalacji (Linux / macOS): `PYTHON=python3.12 bash setup.sh`
+
+---
+
 ## Struktura projektu
 
 ```text
 kostek/
-├── demo/                   # Samodzielna wersja demonstracyjna/wdrożeniowa (ONNX Runtime)
-│   ├── app.py              # Serwer FastAPI z inferencją ONNX (kostek-v4s.onnx)
-│   ├── models/             # Wagi modelu dla wersji demo (.onnx, .pt)
-│   ├── setup.sh / .bat     # Skrypty tworzące .venv i instalujące zależności
-│   ├── run.sh / .bat       # Skrypty uruchamiające serwer Uvicorn
-│   ├── requirements.txt    # Lekkie zależności (bez PyTorcha)
-│   ├── static/             # Arkusze stylów CSS
-│   └── templates/          # Szablony HTML (Jinja2)
-├── models/                 # Wytrenowane wagi (.pt, .onnx) oraz bazowy model YOLO-pose
-├── scripts/                # Skrypty pomocnicze ML
-│   ├── data.py             # Konwersja adnotacji z CSV do formatu YOLO-pose (train/val)
-│   ├── main.py             # Skrypt treningowy YOLO-pose
-│   ├── export.py           # Pomocniczy eksport wag do ONNX
-│   └── bench.py            # Benchmark dokładności predykcji względem Ground Truth (CSV)
-├── static/                 # Arkusze stylów dla głównej aplikacji
-├── templates/              # Szablony HTML dla głównej aplikacji
-├── app.py                  # Aplikacja FastAPI korzystająca z wag PyTorch (.pt)
-├── export_onnx.py          # Narzędzie CLI do eksportu wag .pt -> .onnx
-└── requirements.txt        # Zależności środowiska deweloperskiego
+├── demo/                         # Samodzielna wersja demonstracyjna (ONNX Runtime)
+│   ├── app.py                    # Serwer FastAPI z inferencją ONNX (kostek-v4s.onnx)
+│   ├── models/                   # Wagi modelu dla wersji demo (.onnx, .pt)
+│   ├── setup.sh / setup.bat      # Skrypty tworzące .venv i instalujące zależności
+│   ├── run.sh / run.bat          # Skrypty uruchamiające serwer Uvicorn
+│   ├── requirements.txt          # Lekkie zależności (bez PyTorcha)
+│   ├── static/                   # Arkusze stylów CSS
+│   └── templates/                # Szablony HTML (Jinja2)
+├── models/                       # Wytrenowane wagi (.pt, .onnx) oraz bazowy model YOLO-pose
+├── scripts/                      # Skrypty pomocnicze ML
+│   ├── data.py                   # Konwersja adnotacji z CSV do formatu YOLO-pose (train/val)
+│   ├── main.py                   # Skrypt treningowy YOLO-pose
+│   ├── export.py                 # Pomocniczy eksport wag do ONNX
+│   └── bench.py                  # Benchmark dokładności predykcji względem Ground Truth (CSV)
+├── static/                       # Arkusze stylów dla głównej aplikacji
+├── templates/                    # Szablony HTML dla głównej aplikacji
+├── KartaAudytu/                  # Dokumenty audytu projektu
+├── Dokumentacja_projektu_AI.pdf  # Pełna dokumentacja projektowa (PDF)
+├── app.py                        # Aplikacja FastAPI korzystająca z wag PyTorch (.pt)
+├── export_onnx.py                # Narzędzie CLI do eksportu wag .pt -> .onnx
+└── requirements.txt              # Zależności środowiska deweloperskiego
 ```
-
----
-
-## Szybki start (wersja `demo` – zalecana)
-
-Wersja w katalogu `demo/` nie wymaga kart graficznych ani ciężkich bibliotek treningowych (korzysta z `onnxruntime` na CPU lub GPU CUDA, jeśli jest dostępne).
-
-### Wymagania
-- **Python 3.10** lub nowszy (na systemach Debian/Ubuntu również pakiet `python3-venv`).
-
-### Linux / macOS
-
-```bash
-cd demo
-bash setup.sh
-bash run.sh
-```
-
-### Windows (CMD / PowerShell)
-
-```bat
-cd demo
-setup.bat
-run.bat
-```
-
-Po uruchomieniu aplikacja jest dostępna w przeglądarce pod adresem:
-**http://127.0.0.1:8000**
-
-> **Konfiguracja hosta i portu:**
-> Możesz zmienić domyślny adres nasłuchiwania za pomocą zmiennych środowiskowych `APP_HOST` oraz `APP_PORT`:
-> - Linux / macOS: `APP_HOST=0.0.0.0 APP_PORT=9000 bash run.sh`
-> - Windows (CMD): `set APP_HOST=0.0.0.0 & set APP_PORT=9000 & run.bat`
 
 ---
 
