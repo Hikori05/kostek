@@ -5,6 +5,16 @@
 {% block content %}
     <h1>Wyślij obraz do przetworzenia</h1>
     <form action="/api/submit" method="post" enctype="multipart/form-data" class="upload-box">
+        <label for="model_name" style="text-align: left; font-size: 0.9rem; opacity: 0.85;">
+            Wybierz model detekcji:
+        </label>
+        <select name="model_name" id="model_name"
+                style="padding: 10px 12px; border-radius: 6px; background: #0f172a; color: var(--text-color); border: 1px solid var(--border);">
+            {% for m in models %}
+                <option value="{{ m.file }}">{{ m.label }}</option>
+            {% endfor %}
+        </select>
+
         <input type="file" name="file" accept="image/*" required>
         <button type="submit">Przetwórz w pamięci</button>
     </form>

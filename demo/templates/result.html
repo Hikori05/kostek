@@ -4,7 +4,7 @@
 
 {% block content %}
     <style>
-        .points-table { border-collapse: collapse; margin: 1rem 0; }
+        .points-table { border-collapse: collapse; margin: 1rem auto; }
         .points-table th, .points-table td {
             border: 1px solid rgba(128, 128, 128, 0.45);
             padding: 0.4rem 0.9rem;
@@ -13,13 +13,44 @@
         }
         .points-table th:first-child, .points-table td:first-child { text-align: left; }
         .points-note { opacity: 0.7; font-size: 0.9rem; }
+        .angle-box {
+            margin: 1rem 0;
+            padding: 0.9rem 1.2rem;
+            border-radius: 8px;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+        }
+        .angle-value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
     </style>
 
     <h1>Przetworzony obraz</h1>
 
-    <img src="data:{{ mime_type }};base64,{{ image_base64 }}"
-         alt="Przetworzony obraz"
-         class="image-preview">
+    {% if model_used %}
+        <p class="points-note">Model: <strong>{{ model_used }}</strong></p>
+    {% endif %}
+
+    {% if tpa_angle is not none %}
+        <div class="angle-box">
+            <div>Wyliczony kąt nachylenia plateau (TPA)</div>
+            <div class="angle-value">{{ tpa_angle }}°</div>
+            <div class="points-note">Kąt między osiami P1–P2 i P3–P4: {{ raw_angle }}° (odchylenie od 90°)</div>
+        </div>
+    {% endif %}
+
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;">
+        <figure style="margin: 0; flex: 1 1 200px;">
+            <figcaption class="points-note">Oryginał</figcaption>
+            <img src="data:{{ mime_type }};base64,{{ orig_image_base64 }}"
+                 alt="Oryginalny obraz"
+                 class="image-preview">
+        </figure>
+        <figure style="margin: 0; flex: 1 1 200px;">
+            <figcaption class="points-note">Wynik detekcji</figcaption>
+            <img src="data:{{ mime_type }};base64,{{ image_base64 }}"
+                 alt="Przetworzony obraz"
+                 class="image-preview">
+        </figure>
+    </div>
 
     {% if points %}
         <h2>Współrzędne punktów</h2>
@@ -53,7 +84,13 @@
         <p>Nie wykryto punktów na tym obrazie.</p>
     {% endif %}
 
-    <div>
-        <a href="/" class="btn">Wróć na stronę główną</a>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 1.2rem;">
+        <a href="data:{{ mime_type }};base64,{{ image_base64 }}"
+           download="{{ download_stem }}_wynik.jpg"
+           class="btn">Pobierz obraz (JPG)</a>
+        <a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{{ excel_base64 }}"
+           download="{{ download_stem }}_tpa.xlsx"
+           class="btn">Pobierz raport (Excel)</a>
+        <a href="/" class="btn">Nowe zdjęcie</a>
     </div>
 {% endblock %}

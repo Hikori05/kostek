@@ -29,6 +29,17 @@ IMG_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
 NAME_KEYS = {"image", "file", "filename", "name", "plik", "zdjecie", "obraz"}
 
 
+def calc_tpa(pts):
+    """Wylicza kąt TPA [°] z punktów P1..P4 (wzór zgodny z Cases.xlsx)."""
+    v1 = pts[1] - pts[0]
+    v2 = pts[3] - pts[2]
+    denom = float(np.linalg.norm(v1) * np.linalg.norm(v2))
+    if denom < 1e-9:
+        return None
+    cos_a = float(np.clip(np.dot(v1, v2) / denom, -1.0, 1.0))
+    return float(np.degrees(np.arccos(cos_a)) - 90.0)
+
+
 def num(s):
     return float(s.strip().replace(",", "."))
 
@@ -127,7 +138,7 @@ def run(model, args):
     if vis_dir:
         vis_dir.mkdir(parents=True, exist_ok=True)
 
-    records, errs, rel_errs, times = [], [], [], []
+    records, errs, rel_errs, tpa_errs, times = [], [], [], [], []
     not_found, not_detected, warmed = [], [], False
 
     for name, g in gt.items():
@@ -159,6 +170,14 @@ def run(model, args):
                 rec[f"{NAMES[k]}_pred_y"] = round(float(pred[k, 1]), 1)
                 rec[f"{NAMES[k]}_err_px"] = round(float(e[k]), 1)
             rec["mean_err_px"] = round(float(e.mean()), 1)
+            tpa_gt = calc_tpa(g)
+            tpa_pred = calc_tpa(pred)
+            if tpa_gt is not None and tpa_pred is not None:
+                tpa_err = abs(tpa_pred - tpa_gt)
+                tpa_errs.append(tpa_err)
+                rec["tpa_gt"] = round(tpa_gt, 1)
+                rec["tpa_pred"] = round(tpa_pred, 1)
+                rec["tpa_err_deg"] = round(tpa_err, 1)
         records.append(rec)
         if vis_dir:
             save_vis(img, g, pred, vis_dir / f"{Path(path.name).stem}.jpg")
@@ -176,11 +195,15 @@ def run(model, args):
     print("\nBłąd odległości predykcja–GT w pikselach:\n")
     print(summary_table(errs, thr))
     print(f"\nŚredni błąd względem wysokości obrazu: {np.mean(rel_errs):.2f}%")
+    if tpa_errs:
+        print(f"Błąd kąta TPA: średnio {np.mean(tpa_errs):.2f}° "
+              f"(mediana {np.median(tpa_errs):.2f}°, max {np.max(tpa_errs):.2f}°)")
     print(f"Czas inferencji: średnio {np.mean(times):.0f} ms/obraz "
           f"(mediana {np.median(times):.0f} ms, imgsz={args.imgsz})")
 
     fields = ["image", "width", "height", "detected", "time_ms"]
-    fields += [f"{n}_{s}" for n in NAMES for s in ("pred_x", "pred_y", "err_px")] + ["mean_err_px"]
+    fields += [f"{n}_{s}" for n in NAMES for s in ("pred_x", "pred_y", "err_px")]
+    fields += ["mean_err_px", "tpa_gt", "tpa_pred", "tpa_err_deg"]
     with open(args.out, "w", newline="", encoding="utf-8") as f:
         wr = csv.DictWriter(f, fieldnames=fields)
         wr.writeheader()
