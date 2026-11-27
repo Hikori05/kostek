@@ -1,4 +1,7 @@
 venv/
+.venv/
+__pycache__/
+*.py[cod]
 dataset/
 dataset.zip
 dat/
@@ -6,3 +9,6 @@ dataset_clean/
 dataset_lines/
 data/
 bench/
+TODO.md
+PLAN_ZMIAN.md
+

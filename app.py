@@ -11,7 +11,7 @@ from ultralytics.models.yolo.model import YOLO
 # Ustaw tak samo jak imgsz użyty przy treningu (domyślne 640 psuje dokładność punktów)
 IMGSZ = 1024
 
-model = YOLO("./models/best.pt")
+model = YOLO("./models/kostek-v4s.pt")
 
 app = FastAPI()
 
