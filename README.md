@@ -1,18 +1,20 @@
 # Kostek
 
-Aplikacja webowa (FastAPI) oraz zestaw narzędzi ML do automatycznego wykrywania punktów anatomicznych kości piszczelowej na zdjęciach RTG przy użyciu modeli **YOLO-pose**. Projekt wspomaga wyznaczanie osi anatomicznych wykorzystywanych m.in. przy pomiarze kąta nachylenia plateau kości piszczelowej (**TPA** – *Tibial Plateau Angle*) w ortopedii weterynaryjnej.
+Aplikacja webowa (FastAPI) oraz zestaw narzędzi ML do automatycznego wykrywania punktów anatomicznych kości piszczelowej na zdjęciach RTG i wyliczania kąta nachylenia plateau kości piszczelowej (**TPA** – *Tibial Plateau Angle*) przy użyciu modeli **YOLO-pose**.
 
 ---
 
 ## Funkcjonalności
 
-- **Detekcja 4 punktów kluczowych (`P1`–`P4`)** na zdjęciach rentgenowskich:
-  - **Oś długa piszczeli (`P1`–`P2`)** – od środka kości skokowej (*talus*, `P1`) do wyniosłości międzykłykciowej (*eminence*, `P2`), oznaczana na obrazie kolorem żółtym.
-  - **Linia plateau piszczeli (`P3`–`P4`)** – od krawędzi doczaszkowej (*cranial plateau*, `P3`) do krawędzi doogonowej (*caudal plateau*, `P4`), oznaczana kolorem zielonym.
-- **Przetwarzanie w pamięci RAM** – przesłane zdjęcia nie są zapisywane na dysku serwera; aplikacja automatycznie koryguje orientację EXIF i zwraca wynik zakodowany w Base64 wraz z tabelą współrzędnych (`X`, `Y` w pikselach oryginału) oraz pewnością detekcji (`%`).
-- **Dwa tryby uruchomieniowe**:
-  - **Lekka paczka wdrożeniowa (`demo/`)** – oparta o **ONNX Runtime** (bez konieczności instalowania PyTorcha i `ultralytics`), z gotowymi skryptami instalacyjnymi dla systemów Linux, macOS i Windows.
-  - **Środowisko deweloperskie (katalog główny)** – oparte bezpośrednio o **Ultralytics YOLO** i wagi PyTorch (`.pt`), wraz ze skryptami do przygotowania danych, treningu, eksportu i benchmarkingu.
+- **Detekcja 4 punktów kluczowych (`P1`–`P4`) i automatyczny pomiar kąta TPA:**
+  - **Oś długa piszczeli (`P1`–`P2`)** – środek kości skokowej (*talus*, `P1`) → wyniosłość międzykłykciowa (*eminence*, `P2`), rysowana na żółto.
+  - **Linia plateau piszczeli (`P3`–`P4`)** – krawędź doczaszkowa (*cranial plateau*, `P3`) → krawędź doogonowa (*caudal plateau*, `P4`), rysowana na zielono.
+  - **Kąt TPA (`°`)** – wyliczany automatycznie z wektorów `P1→P2` i `P3→P4` jako odchylenie od `90°`, nanoszony na obraz wynikowy i wyświetlany w karcie podsumowania.
+- **Wybór modelu ONNX z listy:** możliwość przełączania w formularzu między `kostek-v5s.onnx` (domyślny, czyste RTG), `kostek-lines.onnx` (RTG z liniami pomiarowymi, z automatycznym przycinaniem czarnych pasów bocznych) oraz `kostek-v4s.onnx`.
+- **Podgląd porównawczy i eksport w pamięci RAM:**
+  - Porównanie **Oryginał** vs **Wynik detekcji** obok siebie (bez zapisywania zdjęć pacjentów na dysku serwera).
+  - Pobieranie przetworzonego zdjęcia (`.jpg`) oraz raportu **Excel (`.xlsx`)** z kątem TPA, współrzędnymi `P1–P4`, pewnością detekcji i nazwą modelu.
+- **Lokalny ML Dashboard (`dashboard/`):** panel webowy na porcie `8001` do przesyłania nowych danych (zdjęcia / `Cases.csv` / ZIP), podglądu adnotacji, uruchamiania treningów na GPU, benchmarków i eksportu wag `.pt` → `.onnx` wprost do `demo/models/`.
 
 ---
 
@@ -32,11 +34,9 @@ git clone https://github.com/Hikori05/kostek.git
 cd kostek/demo
 ```
 
-*(Jeśli masz już pobraną paczkę ZIP z projektem, rozpakuj ją i otwórz terminal w folderze `demo`).*
-
 ### Krok 2: Jednorazowa instalacja środowiska (`setup`)
 
-Skrypt automatycznie utworzy lokalne środowisko wirtualne `.venv` i zainstaluje wymagane pakiety z `demo/requirements.txt`.
+Skrypt automatycznie utworzy lokalne środowisko wirtualne `.venv` i zainstaluje lekkie zależności z `demo/requirements.txt`.
 
 - **Linux / macOS:**
   ```bash
@@ -46,15 +46,12 @@ Skrypt automatycznie utworzy lokalne środowisko wirtualne `.venv` i zainstaluje
   ```powershell
   .\setup.bat
   ```
-- **Windows (Wiersz polecenia CMD lub Eksplorator plików):**
+- **Windows (CMD lub Eksplorator plików):**
   ```bat
   setup.bat
   ```
-  *(możesz też po prostu kliknąć dwukrotnie plik `setup.bat` w folderze `demo`).*
 
 ### Krok 3: Uruchomienie serwera aplikacji (`run`)
-
-Po zakończeniu instalacji uruchom serwer (przy kolejnych uruchomieniach wykonujesz już tylko ten krok):
 
 - **Linux / macOS:**
   ```bash
@@ -71,20 +68,24 @@ Po zakończeniu instalacji uruchom serwer (przy kolejnych uruchomieniach wykonuj
 
 ### Krok 4: Korzystanie z aplikacji w przeglądarce
 
-1. Po pojawieniu się komunikatu `Uvicorn running on http://127.0.0.1:8000` otwórz w przeglądarce adres:
-   **http://127.0.0.1:8000**
-2. Kliknij wybór pliku i wskaż zdjęcie RTG kości piszczelowej (np. `.png`, `.jpg`).
-3. Kliknij przycisk **„Przetwórz w pamięci”**.
-4. Aplikacja wyświetli:
-   - zdjęcie z naniesionymi punktami `P1`–`P4`, osią piszczeli (`P1`–`P2`, żółta) oraz linią plateau (`P3`–`P4`, zielona),
-   - tabelę z dokładnymi współrzędnymi `X [px]`, `Y [px]` względem oryginalnej rozdzielczości oraz pewnością detekcji (`%`).
-5. Aby zatrzymać serwer, naciśnij `Ctrl + C` w oknie terminala.
+1. Otwórz w przeglądarce adres **http://127.0.0.1:8000**.
+2. Wybierz model z listy (domyślnie `kostek-v5s.onnx`) i wskaż zdjęcie RTG kości piszczelowej.
+3. Kliknij **„Przetwórz w pamięci”** – zobaczysz oryginał obok wyniku, wyliczony **kąt TPA**, tabelę współrzędnych oraz przyciski **Pobierz obraz (JPG)** i **Pobierz raport (Excel)**.
+4. Aby zatrzymać serwer, naciśnij `Ctrl + C` w terminalu.
 
-> **Opcjonalna konfiguracja (zmiana portu, hosta lub wersji Pythona):**
-> - Zmiana adresu/portu na Linux / macOS: `APP_HOST=0.0.0.0 APP_PORT=9000 bash run.sh`
-> - Zmiana adresu/portu na Windows (PowerShell): `$env:APP_HOST="0.0.0.0"; $env:APP_PORT="9000"; .\run.bat`
-> - Zmiana adresu/portu na Windows (CMD): `set APP_HOST=0.0.0.0 & set APP_PORT=9000 & run.bat`
-> - Wymuszenie konkretnego interpretera podczas instalacji (Linux / macOS): `PYTHON=python3.12 bash setup.sh`
+> **Zmiana hosta/portu:**
+> - Linux / macOS: `APP_HOST=0.0.0.0 APP_PORT=9000 bash run.sh`
+> - Windows (PowerShell): `$env:APP_HOST="0.0.0.0"; $env:APP_PORT="9000"; .\run.bat`
+
+---
+
+## Wyniki modeli (zbiór walidacyjny)
+
+| Model | Zbiór testowy | Błąd `P1` (kostka) | Średni błąd `ALL` | Średni błąd kąta TPA | Czas inferencji |
+|---|---|---:|---:|---:|---:|
+| `kostek-v4s` (`1024 px`) | czyste RTG | `671.1 px` | `196.3 px` (`7.11%`) | `17.70°` (med. `18.23°`) | `73 ms` |
+| **`kostek-v5s`** (`640 px`) | czyste RTG | **`191.2 px`** | **`102.1 px`** (`3.72%`) | **`10.60°`** (med. **`9.96°`**) | **`44 ms`** |
+| **`kostek-lines`** (`640 px`) | wykadrowane RTG z liniami | `217.9 px` | **`74.6 px`** (med. `36.4 px`) | `23.02°` (med. `25.02°`) | **`31 ms`** |
 
 ---
 
@@ -93,92 +94,63 @@ Po zakończeniu instalacji uruchom serwer (przy kolejnych uruchomieniach wykonuj
 ```text
 kostek/
 ├── demo/                         # Samodzielna wersja demonstracyjna (ONNX Runtime)
-│   ├── app.py                    # Serwer FastAPI z inferencją ONNX (kostek-v4s.onnx)
-│   ├── models/                   # Wagi modelu dla wersji demo (.onnx, .pt)
-│   ├── setup.sh / setup.bat      # Skrypty tworzące .venv i instalujące zależności
-│   ├── run.sh / run.bat          # Skrypty uruchamiające serwer Uvicorn
+│   ├── app.py                    # Serwer FastAPI: wybór modelu, kąt TPA, eksport .xlsx
+│   ├── models/                   # Aktywne modele ONNX (kostek-v5s, kostek-lines, kostek-v4s)
+│   ├── setup.sh / setup.bat      # Tworzenie .venv i instalacja zależności
+│   ├── run.sh / run.bat          # Uruchamianie serwera Uvicorn (port 8000)
 │   ├── requirements.txt          # Lekkie zależności (bez PyTorcha)
-│   ├── static/                   # Arkusze stylów CSS
-│   └── templates/                # Szablony HTML (Jinja2)
-├── models/                       # Wytrenowane wagi (.pt, .onnx) oraz bazowy model YOLO-pose
-├── scripts/                      # Skrypty pomocnicze ML
-│   ├── data.py                   # Konwersja adnotacji z CSV do formatu YOLO-pose (train/val)
-│   ├── main.py                   # Skrypt treningowy YOLO-pose
-│   ├── export.py                 # Pomocniczy eksport wag do ONNX
-│   └── bench.py                  # Benchmark dokładności predykcji względem Ground Truth (CSV)
-├── static/                       # Arkusze stylów dla głównej aplikacji
-├── templates/                    # Szablony HTML dla głównej aplikacji
+│   ├── static/ & templates/      # Style CSS i szablony HTML (Jinja2)
+├── dashboard/                    # Lokalny panel ML (dane, podgląd, trening GPU, eksport ONNX)
+│   ├── app.py                    # Backend panelu (FastAPI)
+│   ├── run.sh                    # Uruchamianie panelu na porcie 8001
+│   └── templates/index.html      # Interfejs 4-zakładkowy
+├── models/                       # Wagi wytrenowane (.pt, .onnx) oraz bazowe (yolo26*-pose.pt)
+├── scripts/                      # Skrypty ML (wszystkie w jednym miejscu)
+│   ├── prep_dat.py               # Budowa czystego zbioru YOLO-pose (podział po case_XXXX)
+│   ├── map_points_to_lines.py    # Przenoszenie punktów .png -> .jpg + kadrowanie czarnych pasów
+│   ├── train_v5.py               # Ulepszony skrypt treningowy YOLO-pose (mosaic=0, box=7.5)
+│   ├── bench.py                  # Benchmark błędów w px oraz błędu kąta TPA w stopniach
+│   └── data.py / main.py / export.py / trai.py
 ├── KartaAudytu/                  # Dokumenty audytu projektu
 ├── Dokumentacja_projektu_AI.pdf  # Pełna dokumentacja projektowa (PDF)
-├── app.py                        # Aplikacja FastAPI korzystająca z wag PyTorch (.pt)
+├── app.py                        # Prototypowa aplikacja FastAPI (PyTorch / Ultralytics)
 ├── export_onnx.py                # Narzędzie CLI do eksportu wag .pt -> .onnx
 └── requirements.txt              # Zależności środowiska deweloperskiego
 ```
 
 ---
 
-## Środowisko deweloperskie (PyTorch / Ultralytics)
+## Panel ML (`dashboard/`) i trening z linii poleceń
 
-Jeśli chcesz rozwijać model, trenować nowe wagi lub uruchomić prototyp bezpośrednio na pliku `.pt` z katalogu głównego:
+Do treningu i zarządzania danymi użyj głównego środowiska `.venv` (z PyTorchem, CUDA i Ultralytics):
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install --upgrade pip
-pip install -r requirements.txt
+# Uruchomienie lokalnego ML Dashboardu (http://127.0.0.1:8001)
+bash dashboard/run.sh
 ```
 
-Uruchomienie serwera deweloperskiego:
+Lub bezpośrednio z linii poleceń:
 
 ```bash
-uvicorn app:app --reload --host 127.0.0.1 --port 8000
-```
+# 1. Przygotowanie zbiorów danych
+python scripts/prep_dat.py --src data/dataset_clean --out data/datasets/tpa --val-cases 2 --pad 0.08
+python scripts/map_points_to_lines.py --src data/dataset --csv data/dataset/Cases.csv --out data/datasets/tpa_lines
 
----
+# 2. Trening modeli (czyste RTG / RTG z liniami)
+python scripts/train_v5.py --data data/datasets/tpa/dataset.yaml --model models/yolo26s-pose.pt --name kostek-v5s
+python scripts/train_v5.py --data data/datasets/tpa_lines/dataset.yaml --model models/yolo26s-pose.pt --name kostek-lines
 
-## Trening, eksport i ewaluacja modelu
+# 3. Benchmark (błąd w px + błąd kąta TPA w stopniach)
+python scripts/bench.py --weights models/kostek-v5s.pt --images bench/img --csv bench/dat.csv --imgsz 640
 
-### 1. Przygotowanie zbioru danych
-Skrypt `scripts/data.py` konwertuje współrzędne punktów `P1`–`P4` z pliku `Cases.csv` oraz obrazy źródłowe do struktury wymaganej przez Ultralytics YOLO-pose (`images/`, `labels/`, `data.yaml`) z podziałem na zbiór treningowy i walidacyjny:
-
-```bash
-python scripts/data.py
-```
-
-### 2. Trening modelu
-Uruchomienie treningu bazowego modelu `yolo26n-pose.pt` (domyślnie `imgsz=1024`, 500 epok):
-
-```bash
-python scripts/main.py
-```
-
-### 3. Eksport wag `.pt` do formatu `.onnx`
-Po zakończeniu treningu wyeksportuj najlepsze wagi do formatu ONNX (pamiętaj, aby podać ten sam parametr `--imgsz`, który był użyty podczas treningu):
-
-```bash
-python export_onnx.py \
-  --weights runs/pose/lines/weights/best.pt \
-  --imgsz 1024 \
-  --out demo/models/kostek-v4s.onnx
-```
-
-### 4. Benchmark dokładności (`scripts/bench.py`)
-Skrypt porównuje punkty przewidziane przez model z ręcznymi oznaczeniami z pliku CSV (na zdjęciach spoza zbioru treningowego), wylicza błędy odległości w pikselach (średnia, mediana, 90. percentyl, max, odsetek trafień poniżej progów) oraz opcjonalnie generuje wizualizacje porównawcze (zielony = Ground Truth, czerwony = predykcja):
-
-```bash
-python scripts/bench.py \
-  --weights models/kostek-v4s.pt \
-  --images bench/img \
-  --csv bench/dat.csv \
-  --imgsz 1024 \
-  --save-vis bench/vis \
-  --out benchmark_results.csv
+# 4. Eksport wag .pt -> .onnx
+python export_onnx.py --weights models/kostek-v5s.pt --imgsz 640 --out demo/models/kostek-v5s.onnx
 ```
 
 ---
 
 ## Technologie
 
-- **Backend:** [FastAPI](https://fastapi.tiangolo.com/), [Uvicorn](https://www.uvicorn.org/), Jinja2
-- **Detekcja / ML:** [Ultralytics YOLO-pose](https://docs.ultralytics.com/tasks/pose/), [ONNX Runtime](https://onnxruntime.ai/)
+- **Backend:** [FastAPI](https://fastapi.tiangolo.com/), [Uvicorn](https://www.uvicorn.org/), Jinja2, OpenPyXL
+- **Detekcja / ML:** [Ultralytics YOLO-pose](https://docs.ultralytics.com/tasks/pose/), [ONNX Runtime](https://onnxruntime.ai/), Albumentations
 - **Przetwarzanie obrazu:** Pillow (PIL), OpenCV, NumPy

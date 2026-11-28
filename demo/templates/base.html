@@ -3,12 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Aplikacja Obrazów{% endblock %}</title>
-    <!-- Generowanie ścieżki do globalnego pliku CSS -->
+    <title>{% block title %}Kostek AI – Pomiar TPA{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
 </head>
 <body>
-    <main class="container">
+    <header class="topbar">
+        <a href="/" class="brand">
+            <div class="brand-mark">K</div>
+            <div>
+                <div class="brand-title">Kostek AI</div>
+                <div class="brand-sub">Automatyczny pomiar kąta TPA na zdjęciach RTG</div>
+            </div>
+        </a>
+        <span class="pill">Przetwarzanie wyłącznie w RAM</span>
+    </header>
+
+    <main class="container {% block container_class %}{% endblock %}">
         {% block content %}{% endblock %}
     </main>
 </body>

@@ -1,96 +1,186 @@
 {% extends "base.html" %}
 
-{% block title %}Wynik przetwarzania{% endblock %}
+{% block title %}Kostek AI – Wynik analizy{% endblock %}
+{% block container_class %}wide{% endblock %}
 
 {% block content %}
-    <style>
-        .points-table { border-collapse: collapse; margin: 1rem auto; }
-        .points-table th, .points-table td {
-            border: 1px solid rgba(128, 128, 128, 0.45);
-            padding: 0.4rem 0.9rem;
-            text-align: right;
-            font-variant-numeric: tabular-nums;
-        }
-        .points-table th:first-child, .points-table td:first-child { text-align: left; }
-        .points-note { opacity: 0.7; font-size: 0.9rem; }
-        .angle-box {
-            margin: 1rem 0;
-            padding: 0.9rem 1.2rem;
-            border-radius: 8px;
-            background: rgba(56, 189, 248, 0.12);
-            border: 1px solid rgba(56, 189, 248, 0.4);
-        }
-        .angle-value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
-    </style>
+    <h1>Wynik analizy RTG</h1>
+    <p class="subtitle">Kliknij dowolne zdjęcie, aby otworzyć powiększenie (kółko myszy + przesuwanie).</p>
 
-    <h1>Przetworzony obraz</h1>
-
-    {% if model_used %}
-        <p class="points-note">Model: <strong>{{ model_used }}</strong></p>
-    {% endif %}
-
-    {% if tpa_angle is not none %}
-        <div class="angle-box">
-            <div>Wyliczony kąt nachylenia plateau (TPA)</div>
-            <div class="angle-value">{{ tpa_angle }}°</div>
-            <div class="points-note">Kąt między osiami P1–P2 i P3–P4: {{ raw_angle }}° (odchylenie od 90°)</div>
+    <div class="stats-grid">
+        <div class="stat-card highlight">
+            <div class="stat-label">Kąt nachylenia plateau (TPA)</div>
+            <div class="stat-value">
+                {% if tpa_angle is not none %}{{ tpa_angle }}°{% else %}Brak{% endif %}
+            </div>
+            <div class="stat-sub">Odchylenie linii plateau od prostopadłej (90°)</div>
         </div>
-    {% endif %}
 
-    <div style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;">
-        <figure style="margin: 0; flex: 1 1 200px;">
-            <figcaption class="points-note">Oryginał</figcaption>
-            <img src="data:{{ mime_type }};base64,{{ orig_image_base64 }}"
+        <div class="stat-card">
+            <div class="stat-label">Kąt między osiami P1–P2 i P3–P4</div>
+            <div class="stat-value sm">
+                {% if raw_angle is not none %}{{ raw_angle }}°{% else %}–{% endif %}
+            </div>
+            <div class="stat-sub">Rozdzielczość: {{ width }} × {{ height }} px</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-label">Użyty model</div>
+            <div class="stat-value sm">{{ model_used or "ONNX" }}</div>
+            <div class="stat-sub">Inferencja lokalna (ONNX Runtime)</div>
+        </div>
+    </div>
+
+    <div class="compare-grid">
+        <figure class="img-card">
+            <figcaption class="img-card-head">
+                Oryginał <span>Kliknij, aby przybliżyć</span>
+            </figcaption>
+            <img id="imgOrig"
+                 src="data:{{ mime_type }};base64,{{ orig_image_base64 }}"
                  alt="Oryginalny obraz"
-                 class="image-preview">
+                 class="image-preview zoomable"
+                 onclick="openZoom('orig')">
         </figure>
-        <figure style="margin: 0; flex: 1 1 200px;">
-            <figcaption class="points-note">Wynik detekcji</figcaption>
-            <img src="data:{{ mime_type }};base64,{{ image_base64 }}"
+
+        <figure class="img-card">
+            <figcaption class="img-card-head">
+                Wynik detekcji <span>Kliknij, aby przybliżyć</span>
+            </figcaption>
+            <img id="imgResult"
+                 src="data:{{ mime_type }};base64,{{ image_base64 }}"
                  alt="Przetworzony obraz"
-                 class="image-preview">
+                 class="image-preview zoomable"
+                 onclick="openZoom('result')">
         </figure>
     </div>
 
+    <div class="legend">
+        <span><i class="dot" style="background:#ffc800;"></i>Oś piszczeli (P1–P2)</span>
+        <span><i class="dot" style="background:#00ff00;"></i>Plateau piszczeli (P3–P4)</span>
+        <span><i class="dot" style="background:#ff0000;"></i>Wykryte punkty anatomiczne</span>
+    </div>
+
     {% if points %}
-        <h2>Współrzędne punktów</h2>
-        <table class="points-table">
-            <thead>
-                <tr>
-                    <th>Punkt</th>
-                    <th>X [px]</th>
-                    <th>Y [px]</th>
-                    {% if has_conf %}<th>Pewność</th>{% endif %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in points %}
-                <tr>
-                    <td>{{ p.name }}</td>
-                    <td>{{ p.x }}</td>
-                    <td>{{ p.y }}</td>
-                    {% if has_conf %}
-                        <td>{% if p.conf is not none %}{{ p.conf }} %{% else %}–{% endif %}</td>
-                    {% endif %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <h2>Współrzędne punktów kluczowych</h2>
+        <div class="table-wrap">
+            <table class="points-table">
+                <thead>
+                    <tr>
+                        <th>Punkt</th>
+                        <th>X [px]</th>
+                        <th>Y [px]</th>
+                        {% if has_conf %}<th>Pewność</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in points %}
+                    <tr>
+                        <td>{{ p.name }}</td>
+                        <td>{{ p.x }}</td>
+                        <td>{{ p.y }}</td>
+                        {% if has_conf %}
+                            <td>
+                                {% if p.conf is not none %}
+                                    <span class="conf-bar">
+                                        <span class="conf-track"><span class="conf-fill" style="width: {{ p.conf }}%;"></span></span>
+                                        {{ p.conf }}%
+                                    </span>
+                                {% else %}–{% endif %}
+                            </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         <p class="points-note">
-            Piksele względem oryginalnego obrazu ({{ width }} × {{ height }} px),
-            (0, 0) to lewy górny róg, Y rośnie w dół.
+            Współrzędne podane w pikselach oryginalnego obrazu ({{ width }} × {{ height }} px); punkt (0, 0) to lewy górny róg.
         </p>
     {% else %}
-        <p>Nie wykryto punktów na tym obrazie.</p>
+        <p class="points-note">Nie wykryto punktów anatomicznych na tym obrazie.</p>
     {% endif %}
 
-    <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 1.2rem;">
+    <div class="actions">
         <a href="data:{{ mime_type }};base64,{{ image_base64 }}"
            download="{{ download_stem }}_wynik.jpg"
            class="btn">Pobierz obraz (JPG)</a>
         <a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{{ excel_base64 }}"
            download="{{ download_stem }}_tpa.xlsx"
-           class="btn">Pobierz raport (Excel)</a>
-        <a href="/" class="btn">Nowe zdjęcie</a>
+           class="btn btn-green">Pobierz raport (Excel)</a>
+        <a href="/" class="btn btn-secondary">Nowe zdjęcie</a>
     </div>
+
+    <div id="lightbox" class="lightbox" role="dialog" aria-label="Powiększenie zdjęcia">
+        <div class="lightbox-bar">
+            <button type="button" class="btn-secondary" onclick="setZoomSrc('orig')">Oryginał</button>
+            <button type="button" class="btn-secondary" onclick="setZoomSrc('result')">Wynik</button>
+            <button type="button" onclick="zoomBy(1.25)">+ Przybliż</button>
+            <button type="button" onclick="zoomBy(0.8)">− Oddal</button>
+            <button type="button" class="btn-secondary" onclick="resetZoom()">Reset (100%)</button>
+            <span id="zoomLabel" class="points-note" style="margin: 0; min-width: 52px;">100%</span>
+            <button type="button" onclick="closeZoom()" style="background: #ef4444; color: #fff;">✕ Zamknij</button>
+        </div>
+        <div id="lightboxStage" class="lightbox-stage">
+            <img id="lightboxImg" src="" alt="Powiększony podgląd">
+        </div>
+    </div>
+
+    <script>
+        let scale = 1, tx = 0, ty = 0, dragging = false, sx = 0, sy = 0;
+        const lb = document.getElementById("lightbox");
+        const stage = document.getElementById("lightboxStage");
+        const lbImg = document.getElementById("lightboxImg");
+        const zoomLabel = document.getElementById("zoomLabel");
+
+        function applyTransform() {
+            lbImg.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+            zoomLabel.textContent = Math.round(scale * 100) + "%";
+        }
+        function resetZoom() { scale = 1; tx = 0; ty = 0; applyTransform(); }
+        function setZoomSrc(which) {
+            lbImg.src = document.getElementById(which === "orig" ? "imgOrig" : "imgResult").src;
+        }
+        function openZoom(which) {
+            setZoomSrc(which);
+            resetZoom();
+            lb.classList.add("open");
+        }
+        function closeZoom() { lb.classList.remove("open"); }
+        function zoomBy(factor) {
+            scale = Math.min(8, Math.max(1, scale * factor));
+            if (scale === 1) { tx = 0; ty = 0; }
+            applyTransform();
+        }
+
+        stage.addEventListener("wheel", (e) => {
+            e.preventDefault();
+            zoomBy(e.deltaY < 0 ? 1.18 : 0.85);
+        }, { passive: false });
+
+        stage.addEventListener("mousedown", (e) => {
+            if (scale <= 1) return;
+            dragging = true;
+            sx = e.clientX - tx;
+            sy = e.clientY - ty;
+            stage.classList.add("dragging");
+        });
+        window.addEventListener("mousemove", (e) => {
+            if (!dragging) return;
+            tx = e.clientX - sx;
+            ty = e.clientY - sy;
+            applyTransform();
+        });
+        window.addEventListener("mouseup", () => {
+            dragging = false;
+            stage.classList.remove("dragging");
+        });
+        window.addEventListener("keydown", (e) => {
+            if (!lb.classList.contains("open")) return;
+            if (e.key === "Escape") closeZoom();
+            if (e.key === "+" || e.key === "=") zoomBy(1.25);
+            if (e.key === "-") zoomBy(0.8);
+            if (e.key === "0") resetZoom();
+        });
+    </script>
 {% endblock %}

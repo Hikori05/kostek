@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kostek – Panel ML (Dane, Trening, Modele)</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card: #131c31;
+      --card-2: #1a2540;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --border: #263354;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    header h1 { margin: 0; font-size: 1.25rem; color: var(--primary); }
+    .badge {
+      font-size: 0.82rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: var(--primary);
+    }
+    .badge.ok { background: rgba(34, 197, 94, 0.14); border-color: rgba(34, 197, 94, 0.4); color: var(--green); }
+    .badge.warn { background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.4); color: var(--amber); }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      padding: 14px 24px 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 10px 16px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+    main { max-width: 1280px; margin: 0 auto; padding: 22px 24px 48px; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 18px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+    }
+    .card h2 { margin: 0 0 12px; font-size: 1.05rem; color: var(--primary); }
+    .card h3 { margin: 14px 0 8px; font-size: 0.95rem; color: var(--text); }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin: 8px 0 4px; }
+    input[type="text"], input[type="number"], input[type="file"], select {
+      width: 100%;
+      padding: 9px 11px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+    .row > * { flex: 1 1 130px; }
+    button, .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 15px;
+      border-radius: 6px;
+      border: none;
+      background: var(--primary);
+      color: #0b1120;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    button.secondary, .btn.secondary { background: var(--card-2); color: var(--text); border: 1px solid var(--border); }
+    button.green { background: var(--green); color: #052e16; }
+    button.danger { background: var(--red); color: #fff; }
+    button.sm, .btn.sm { padding: 5px 10px; font-size: 0.8rem; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    pre.console {
+      background: #050914;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.8rem;
+      max-height: 360px;
+      overflow: auto;
+      white-space: pre-wrap;
+      color: #cbd5e1;
+      margin: 10px 0 0;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .thumb {
+      background: var(--card-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .thumb:hover { transform: translateY(-2px); border-color: var(--primary); }
+    .thumb img { width: 100%; height: 220px; object-fit: contain; background: #000; display: block; }
+    .thumb-meta { padding: 8px 10px; font-size: 0.8rem; display: flex; justify-content: space-between; gap: 6px; }
+    .muted { color: var(--muted); font-size: 0.85rem; }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--card-2);
+      border: 1px solid var(--primary);
+      padding: 10px 16px;
+      border-radius: 8px;
+      display: none;
+      z-index: 999;
+      max-width: 420px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .modal.open { display: flex; }
+    .modal img { max-width: 92vw; max-height: 88vh; border-radius: 8px; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Kostek – ML Dashboard</h1>
+      <div class="muted">Zarządzanie danymi RTG, podgląd adnotacji P1–P4, trening YOLO-pose, benchmark i wdrożenie ONNX do demo/</div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <span class="badge">GPU: {{ gpu }}</span>
+      <span id="trainBadge" class="badge">Status: bezczynny</span>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" onclick="switchTab('data', this)">1. Dane i Podgląd</button>
+    <button class="tab-btn" onclick="switchTab('train', this)">2. Trening modelu</button>
+    <button class="tab-btn" onclick="switchTab('bench', this)">3. Benchmark</button>
+    <button class="tab-btn" onclick="switchTab('models', this)">4. Modele i Wdrożenie</button>
+  </nav>
+
+  <main>
+    <!-- ===================== TAB 1: DANE ===================== -->
+    <section id="tab-data" class="panel active">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Prześlij nowe zdjęcia RTG / CSV / ZIP</h2>
+          <form id="uploadDataForm">
+            <label>Folder docelowy w <code>data/</code></label>
+            <select name="target">
+              <option value="dataset_clean">data/dataset_clean (czyste obrazy PNG + Cases.csv)</option>
+              <option value="dataset">data/dataset (foldery case_XXXX z PNG + JPG + Cases.csv)</option>
+            </select>
+            <label>Wybierz pliki (możesz zaznaczyć wiele zdjęć + Cases.csv albo archiwum .zip)</label>
+            <input type="file" name="files" multiple required />
+            <div style="margin-top:12px;">
+              <button type="submit">Prześlij pliki</button>
+            </div>
+          </form>
+          <div id="uploadDataMsg" class="muted" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="card">
+          <h2>Przebuduj zbiory treningowe YOLO-pose</h2>
+          <p class="muted" id="rawStats">Ładowanie statystyk...</p>
+          <div class="row">
+            <div>
+              <label>Przypadków do walidacji (val)</label>
+              <input type="number" id="rebuildValCases" value="2" min="1" max="10" />
+            </div>
+            <div>
+              <label>Margines bbox (pad)</label>
+              <input type="number" id="rebuildPad" value="0.08" step="0.01" min="0.02" max="0.2" />
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+            <button onclick="rebuildDataset('tpa')">Przebuduj czyste (tpa)</button>
+            <button class="secondary" onclick="rebuildDataset('tpa_lines')">Przebuduj z liniami (tpa_lines)</button>
+          </div>
+          <pre id="rebuildLog" class="console" style="display:none;"></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h2 style="margin:0;">Podgląd zbioru danych (punkty P1–P4, osie, bbox i kąt GT TPA)</h2>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <select id="previewDataset" onchange="renderGallery()" style="width:auto;"></select>
+            <select id="previewSplit" onchange="renderGallery()" style="width:auto;">
+              <option value="train">train</option>
+              <option value="val">val</option>
+            </select>
+            <button class="secondary sm" onclick="loadDatasets()">Odśwież</button>
+          </div>
+        </div>
+        <div id="gallery" class="gallery"></div>
+      </div>
+    </section>
+
+    <!-- ===================== TAB 2: TRENING ===================== -->
+    <section id="tab-train" class="panel">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Uruchom nowy trening YOLO-pose</h2>
+          <form id="trainForm">
+            <div class="row">
+              <div>
+                <label>Nazwa biegu / modelu</label>
+                <input type="text" name="name" value="kostek-v6s" required />
+              </div>
+              <div>
+                <label>Zbiór danych</label>
+                <select name="dataset" id="trainDataset"></select>
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label>Model bazowy (.pt z models/)</label>
+                <select name="base_model" id="trainBaseModel"></select>
+              </div>
+              <div>
+                <label>Rozmiar wejścia (imgsz)</label>
+                <select name="imgsz">
+                  <option value="640" selected>640 (zalecane – najlepsze P1)</option>
+                  <option value="800">800</option>
+                  <option value="1024">1024</option>
+                </select>
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label>Epoki</label>
+                <input type="number" name="epochs" value="200" min="10" max="1000" />
+              </div>
+              <div>
+                <label>Batch</label>
+                <input type="number" name="batch" value="4" min="1" max="16" />
+              </div>
+              <div>
+                <label>Patience</label>
+                <input type="number" name="patience" value="100" min="10" max="300" />
+              </div>
+              <div>
+                <label>fliplr (0.0 przy małym zbiorze)</label>
+                <input type="number" name="fliplr" value="0.0" step="0.1" min="0" max="1" />
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:14px;">
+              <button type="submit" id="btnTrainStart" class="green">Uruchom trening</button>
+              <button type="button" id="btnTrainStop" class="danger" onclick="stopTraining()" disabled>Zatrzymaj</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Log treningu na żywo</h2>
+          <div id="trainMeta" class="muted">Brak aktywnego treningu.</div>
+          <pre id="trainLog" class="console">Tu pojawią się logi po uruchomieniu treningu...</pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Historia biegów treningowych (<code>data/runs/pose/</code>)</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Nazwa biegu</th>
+              <th>Epoki</th>
+              <th>Best Pose mAP50-95</th>
+              <th>best.pt</th>
+              <th>Akcje</th>
+            </tr>
+          </thead>
+          <tbody id="runsTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== TAB 3: BENCHMARK ===================== -->
+    <section id="tab-bench" class="panel">
+      <div class="card">
+        <h2>Uruchom benchmark dokładności (px + błąd kąta TPA w stopniach)</h2>
+        <form id="benchForm">
+          <div class="row">
+            <div>
+              <label>Wybierz wagi (.pt)</label>
+              <select name="weights_rel" id="benchWeights"></select>
+            </div>
+            <div>
+              <label>Zbiór testowy</label>
+              <select name="suite">
+                <option value="clean">Czyste RTG (bench/img – case 17 i 24)</option>
+                <option value="lines">Wykadrowane RTG z liniami (tpa_lines/val)</option>
+              </select>
+            </div>
+            <div>
+              <label>Rozmiar wejścia (imgsz)</label>
+              <select name="imgsz">
+                <option value="640" selected>640</option>
+                <option value="800">800</option>
+                <option value="1024">1024</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <button type="submit" id="btnRunBench">Uruchom benchmark</button>
+          </div>
+        </form>
+        <pre id="benchOut" class="console">Wybierz model i kliknij „Uruchom benchmark”...</pre>
+      </div>
+    </section>
+
+    <!-- ===================== TAB 4: MODELE ===================== -->
+    <section id="tab-models" class="panel">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Prześlij gotowy model (.pt lub .onnx)</h2>
+          <form id="uploadModelForm">
+            <label>Plik modelu (.pt lub .onnx)</label>
+            <input type="file" name="file" accept=".pt,.onnx" required />
+            <label style="display:flex; gap:8px; align-items:center; margin-top:10px; color:var(--text);">
+              <input type="checkbox" name="deploy_to_demo" value="true" checked style="width:auto;" />
+              Jeśli to .onnx, od razu wdróż do <code>demo/models/</code>
+            </label>
+            <div style="margin-top:12px;">
+              <button type="submit">Prześlij model</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Aktywne modele w <code>demo/models/</code> (widoczne w aplikacji)</h2>
+          <table>
+            <thead>
+              <tr><th>Plik ONNX</th><th>Rozmiar</th><th>Akcje</th></tr>
+            </thead>
+            <tbody id="demoModelsTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Wszystkie modele w repozytorium (<code>models/</code>)</h2>
+        <table>
+          <thead>
+            <tr><th>Plik</th><th>Typ</th><th>Rozmiar</th><th>W demo/</th><th>Akcje</th></tr>
+          </thead>
+          <tbody id="repoModelsTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <div id="modal" class="modal" onclick="this.classList.remove('open')">
+    <img id="modalImg" src="" alt="Podgląd" />
+  </div>
+
+  <script>
+    let cachedDatasets = [];
+    let cachedRuns = [];
+    let cachedModels = { repo_models: [], demo_models: [] };
+
+    function toast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.style.display = "block";
+      clearTimeout(el._t);
+      el._t = setTimeout(() => (el.style.display = "none"), 4000);
+    }
+
+    function switchTab(id, btn) {
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById("tab-" + id).classList.add("active");
+      btn.classList.add("active");
+    }
+
+    async function loadDatasets() {
+      const r = await fetch("/api/datasets");
+      const d = await r.json();
+      cachedDatasets = d.datasets || [];
+      document.getElementById("rawStats").textContent =
+        `Surowe obrazy w data/dataset_clean: ${d.raw_clean_images} | Przypadki w data/dataset: ${d.raw_cases}`;
+
+      const selPrev = document.getElementById("previewDataset");
+      const selTrain = document.getElementById("trainDataset");
+      const curPrev = selPrev.value;
+      const curTrain = selTrain.value;
+      selPrev.innerHTML = "";
+      selTrain.innerHTML = "";
+      cachedDatasets.forEach(ds => {
+        const label = `${ds.name} (train: ${ds.splits.train.length}, val: ${ds.splits.val.length})`;
+        selPrev.add(new Option(label, ds.name));
+        selTrain.add(new Option(label, ds.name));
+      });
+      if (curPrev) selPrev.value = curPrev;
+      if (curTrain) selTrain.value = curTrain;
+      renderGallery();
+    }
+
+    function renderGallery() {
+      const dsName = document.getElementById("previewDataset").value;
+      const split = document.getElementById("previewSplit").value;
+      const ds = cachedDatasets.find(x => x.name === dsName);
+      const gal = document.getElementById("gallery");
+      gal.innerHTML = "";
+      if (!ds) {
+        gal.innerHTML = '<div class="muted">Brak wygenerowanych zbiorów – kliknij „Przebuduj”.</div>';
+        return;
+      }
+      const list = ds.splits[split] || [];
+      if (!list.length) {
+        gal.innerHTML = '<div class="muted">Brak obrazów w tym splicie.</div>';
+        return;
+      }
+      const ts = Date.now();
+      list.forEach(item => {
+        const url = `/api/datasets/${encodeURIComponent(dsName)}/${split}/${encodeURIComponent(item.file)}/preview?t=${ts}`;
+        const div = document.createElement("div");
+        div.className = "thumb";
+        div.onclick = () => {
+          document.getElementById("modalImg").src = url;
+          document.getElementById("modal").classList.add("open");
+        };
+        const tpaText = item.tpa !== null ? `TPA: ${item.tpa}°` : "brak etykiety";
+        div.innerHTML = `
+          <img src="${url}" loading="lazy" alt="${item.file}" />
+          <div class="thumb-meta">
+            <strong>${item.file}</strong>
+            <span style="color:var(--primary)">${tpaText}</span>
+          </div>
+          <div class="thumb-meta muted" style="padding-top:0;">
+            <span>${item.size || ""}</span>
+            <span>${item.has_label ? "etykieta OK" : "brak .txt"}</span>
+          </div>`;
+        gal.appendChild(div);
+      });
+    }
+
+    document.getElementById("uploadDataForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const r = await fetch("/api/datasets/upload", { method: "POST", body: fd });
+      const d = await r.json();
+      if (!r.ok) return toast("Błąd: " + (d.detail || r.statusText));
+      document.getElementById("uploadDataMsg").textContent =
+        `Zapisano ${d.saved_count} plików w data/${d.target}. Kliknij teraz „Przebuduj”.`;
+      toast(`Przesłano ${d.saved_count} plików.`);
+      e.target.reset();
+      loadDatasets();
+    };
+
+    async function rebuildDataset(kind) {
+      const fd = new FormData();
+      fd.append("kind", kind);
+      fd.append("val_cases", document.getElementById("rebuildValCases").value);
+      fd.append("pad", document.getElementById("rebuildPad").value);
+      const logEl = document.getElementById("rebuildLog");
+      logEl.style.display = "block";
+      logEl.textContent = "Przebudowywanie zbioru " + kind + "...";
+      const r = await fetch("/api/datasets/rebuild", { method: "POST", body: fd });
+      const d = await r.json();
+      logEl.textContent = d.output || "(brak wyjścia)";
+      toast(d.ok ? `Zbiór ${kind} przebudowany!` : `Błąd przebudowy ${kind}`);
+      loadDatasets();
+    }
+
+    async function loadTrainStatus() {
+      const r = await fetch("/api/train/status");
+      const d = await r.json();
+      cachedRuns = d.runs || [];
+      const st = d.state;
+      const badge = document.getElementById("trainBadge");
+      const meta = document.getElementById("trainMeta");
+      document.getElementById("btnTrainStart").disabled = st.running;
+      document.getElementById("btnTrainStop").disabled = !st.running;
+
+      if (st.running) {
+        badge.className = "badge warn";
+        badge.textContent = `Trening trwa: ${st.name}`;
+        meta.textContent = `Aktywny bieg: ${st.name}`;
+      } else if (st.name) {
+        badge.className = st.exit_code === 0 ? "badge ok" : "badge";
+        badge.textContent = `Ostatni: ${st.name} (kod ${st.exit_code})`;
+        meta.textContent = `Zakończono bieg: ${st.name} (exit code: ${st.exit_code})`;
+      } else {
+        badge.className = "badge";
+        badge.textContent = "Status: bezczynny";
+      }
+
+      if (d.log_tail) {
+        const logEl = document.getElementById("trainLog");
+        logEl.textContent = d.log_tail;
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      const tb = document.getElementById("runsTable");
+      tb.innerHTML = "";
+      cachedRuns.forEach(run => {
+        const tr = document.createElement("tr");
+        const bestMap = run.best_map50_95 !== null ? run.best_map50_95 : "–";
+        tr.innerHTML = `
+          <td><strong>${run.name}</strong></td>
+          <td>${run.epochs}</td>
+          <td>${bestMap}</td>
+          <td>${run.has_best ? "OK" : "brak"}</td>
+          <td style="display:flex; gap:6px; flex-wrap:wrap;">
+            ${run.has_best ? `<button class="sm green" onclick="exportRun('${run.best_path}', '${run.name}')">Eksportuj ONNX + demo/</button>` : ""}
+            ${run.has_best ? `<button class="sm secondary" onclick="quickBench('${run.best_path}')">Benchmark</button>` : ""}
+          </td>`;
+        tb.appendChild(tr);
+      });
+      refreshBenchWeights();
+    }
+
+    document.getElementById("trainForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const r = await fetch("/api/train/start", { method: "POST", body: fd });
+      const d = await r.json();
+      if (!r.ok) return toast("Błąd: " + (d.detail || r.statusText));
+      toast("Uruchomiono trening: " + d.name);
+      loadTrainStatus();
+    };
+
+    async function stopTraining() {
+      const r = await fetch("/api/train/stop", { method: "POST" });
+      const d = await r.json();
+      toast(d.message || "Zatrzymano.");
+      loadTrainStatus();
+    }
+
+    async function exportRun(srcRel, defaultName) {
+      const outName = prompt("Podaj nazwę modelu (bez rozszerzenia):", defaultName);
+      if (!outName) return;
+      const imgsz = prompt("Rozmiar wejścia imgsz użyty przy treningu (np. 640 lub 1024):", "640");
+      if (!imgsz) return;
+      toast("Eksportuję do ONNX i wdrażam do demo/models/...");
+      const fd = new FormData();
+      fd.append("source_rel", srcRel);
+      fd.append("out_name", outName);
+      fd.append("imgsz", imgsz);
+      fd.append("deploy_to_demo", "true");
+      const r = await fetch("/api/models/export", { method: "POST", body: fd });
+      const d = await r.json();
+      if (!r.ok) return toast("Błąd eksportu: " + (d.detail || r.statusText));
+      toast(`Gotowe! Wdrożono ${d.onnx} do demo/models/`);
+      loadModels();
+    }
+
+    function quickBench(weightsRel) {
+      document.querySelectorAll(".tab-btn")[2].click();
+      const sel = document.getElementById("benchWeights");
+      sel.value = weightsRel;
+    }
+
+    function refreshBenchWeights() {
+      const sel = document.getElementById("benchWeights");
+      const prev = sel.value;
+      sel.innerHTML = "";
+      cachedModels.repo_models.filter(m => m.ext === ".pt").forEach(m => {
+        sel.add(new Option(`models/${m.name} (${m.size_mb} MB)`, m.rel_path));
+      });
+      cachedRuns.filter(r => r.has_best).forEach(r => {
+        sel.add(new Option(`run: ${r.name}/best.pt (mAP=${r.best_map50_95 ?? "?"})`, r.best_path));
+      });
+      if (prev) sel.value = prev;
+    }
+
+    document.getElementById("benchForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("btnRunBench");
+      const out = document.getElementById("benchOut");
+      btn.disabled = true;
+      out.textContent = "Trwa benchmark...";
+      const fd = new FormData(e.target);
+      const r = await fetch("/api/benchmark", { method: "POST", body: fd });
+      const d = await r.json();
+      btn.disabled = false;
+      out.textContent = d.output || d.detail || "Brak wyniku.";
+    };
+
+    async function loadModels() {
+      const r = await fetch("/api/models");
+      cachedModels = await r.json();
+
+      // Modele bazowe do formularza treningu
+      const baseSel = document.getElementById("trainBaseModel");
+      const prevBase = baseSel.value;
+      baseSel.innerHTML = "";
+      cachedModels.repo_models.filter(m => m.ext === ".pt").forEach(m => {
+        baseSel.add(new Option(`${m.name} (${m.size_mb} MB)`, m.name));
+      });
+      if (prevBase) baseSel.value = prevBase;
+      else if ([...baseSel.options].some(o => o.value === "yolo26s-pose.pt")) baseSel.value = "yolo26s-pose.pt";
+
+      // Tabela demo/models
+      const demoTb = document.getElementById("demoModelsTable");
+      demoTb.innerHTML = "";
+      cachedModels.demo_models.forEach(m => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>${m.name}</strong></td>
+          <td>${m.size_mb} MB</td>
+          <td style="display:flex; gap:6px;">
+            <a class="btn sm secondary" href="/api/models/download/demo/${encodeURIComponent(m.name)}">Pobierz</a>
+            <button class="sm danger" onclick="removeFromDemo('${m.name}')">Usuń z demo</button>
+          </td>`;
+        demoTb.appendChild(tr);
+      });
+
+      // Tabela models/
+      const repoTb = document.getElementById("repoModelsTable");
+      repoTb.innerHTML = "";
+      cachedModels.repo_models.forEach(m => {
+        const tr = document.createElement("tr");
+        let actionBtn = "";
+        if (m.ext === ".pt") {
+          actionBtn = `<button class="sm green" onclick="exportRun('${m.rel_path}', '${m.name.replace(/\.pt$/i, "")}')">Eksportuj ONNX + demo/</button>`;
+        } else if (m.ext === ".onnx" && !m.in_demo) {
+          actionBtn = `<button class="sm green" onclick="deployOnnx('${m.name}')">Wdróż do demo/</button>`;
+        }
+        tr.innerHTML = `
+          <td><strong>${m.name}</strong></td>
+          <td>${m.ext}</td>
+          <td>${m.size_mb} MB</td>
+          <td>${m.in_demo ? '<span class="badge ok">Tak</span>' : "Nie"}</td>
+          <td style="display:flex; gap:6px; flex-wrap:wrap;">
+            ${actionBtn}
+            <a class="btn sm secondary" href="/api/models/download/repo/${encodeURIComponent(m.name)}">Pobierz</a>
+          </td>`;
+        repoTb.appendChild(tr);
+      });
+
+      refreshBenchWeights();
+    }
+
+    document.getElementById("uploadModelForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const r = await fetch("/api/models/upload", { method: "POST", body: fd });
+      const d = await r.json();
+      if (!r.ok) return toast("Błąd: " + (d.detail || r.statusText));
+      toast(`Przesłano model ${d.name}` + (d.deployed_to_demo ? " i wdrożono do demo/!" : "."));
+      e.target.reset();
+      loadModels();
+    };
+
+    async function deployOnnx(name) {
+      const r = await fetch(`/api/models/deploy/${encodeURIComponent(name)}`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) return toast("Błąd: " + (d.detail || r.statusText));
+      toast(`Wdrożono ${name} do demo/models/`);
+      loadModels();
+    }
+
+    async function removeFromDemo(name) {
+      if (!confirm(`Usunąć ${name} z demo/models/? (Kopia w models/ pozostanie bez zmian)`)) return;
+      const r = await fetch(`/api/models/demo/${encodeURIComponent(name)}`, { method: "DELETE" });
+      if (r.ok) {
+        toast(`Usunięto ${name} z demo/models/`);
+        loadModels();
+      }
+    }
+
+    // Init + odświeżanie statusu treningu co 2.5s
+    loadDatasets();
+    loadModels();
+    loadTrainStatus();
+    setInterval(loadTrainStatus, 2500);
+  </script>
+</body>
+</html>

@@ -22,6 +22,8 @@ def main():
     ap.add_argument("--epochs", type=int, default=250)
     ap.add_argument("--imgsz", type=int, default=640)
     ap.add_argument("--batch", type=int, default=4)
+    ap.add_argument("--patience", type=int, default=100)
+    ap.add_argument("--fliplr", type=float, default=0.0)
     ap.add_argument("--device", default="0")
     ap.add_argument("--project", default="data/runs/pose")
     ap.add_argument("--name", default="kostek-v5s")
@@ -44,7 +46,7 @@ def main():
         project=str(Path(a.project).resolve()),
         name=a.name,
         workers=2,
-        patience=100,
+        patience=a.patience,
         cache=True,
         # Geometria bezpieczna dla całej piszczeli (bez ucinania stawu skokowego P1)
         degrees=15.0,
@@ -52,7 +54,7 @@ def main():
         scale=0.30,
         shear=0.0,
         perspective=0.0,
-        fliplr=0.0,          # wyłączone: przy małym zbiorze odbicie ściąga P3 i P4 do środka kolana
+        fliplr=a.fliplr,     # domyślnie 0.0: przy małym zbiorze odbicie ściąga P3 i P4 do środka kolana
         flipud=0.0,
         # Wyłączamy mozaikę, random erasing i randaugment (psują precyzję keypointów)
         mosaic=0.0,

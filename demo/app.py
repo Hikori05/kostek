@@ -87,11 +87,27 @@ def preprocess(img: Image.Image, model_h: int, model_w: int):
     return np.ascontiguousarray(blob), scale, left, top
 
 
+def crop_black_margins(img: Image.Image, thr: int = 10):
+    """Jeśli obraz ma duże czarne pasy (np. zrzut ekranu 4254x1518), zwraca (wycinek, ox, oy)."""
+    bbox = img.convert("L").point(lambda p: 255 if p > thr else 0).getbbox()
+    if bbox is None:
+        return img, 0, 0
+    x0, y0, x1, y1 = bbox
+    bw, bh = x1 - x0, y1 - y0
+    if bw < 64 or bh < 64:
+        return img, 0, 0
+    # Kadrujemy tylko wtedy, gdy czarne pasy zajmują ponad 15% szerokości lub wysokości
+    if bw < img.width * 0.85 or bh < img.height * 0.85:
+        return img.crop((x0, y0, x1, y1)), x0, y0
+    return img, 0, 0
+
+
 def detect(img: Image.Image, model_file: str):
     """Zwraca None albo (xs, ys, conf) dla punktów P1..P4 w pikselach oryginału."""
     sess, inp_name, model_h, model_w = get_model(model_file)
     w, h = img.size
-    blob, scale, left, top = preprocess(img, model_h, model_w)
+    work_img, ox, oy = crop_black_margins(img)
+    blob, scale, left, top = preprocess(work_img, model_h, model_w)
     out = sess.run(None, {inp_name: blob})[0][0]
 
     if out.shape[0] < out.shape[1]:
@@ -105,8 +121,8 @@ def detect(img: Image.Image, model_file: str):
         return None
 
     k = kpts[i][: NK * 3].reshape(NK, 3)
-    xs = np.clip((k[:, 0] - left) / scale, 0, w)
-    ys = np.clip((k[:, 1] - top) / scale, 0, h)
+    xs = np.clip((k[:, 0] - left) / scale + ox, 0, w)
+    ys = np.clip((k[:, 1] - top) / scale + oy, 0, h)
     return xs, ys, k[:, 2]
 
 
@@ -214,21 +230,22 @@ async def handle_form(
         ]
 
         draw = ImageDraw.Draw(annotated_image)
-        s = max(2, annotated_image.width // 300)
-        font = get_font(max(18, annotated_image.width // 40))
+        base = min(annotated_image.width, annotated_image.height)
+        s = max(2, base // 450)
+        font = get_font(max(16, base // 55))
 
         draw.line([pts[0], pts[1]], fill=(255, 200, 0), width=s)
         draw.line([pts[2], pts[3]], fill=(0, 255, 0), width=s)
 
         for name, (x, y) in zip(NAMES, pts):
-            rad = s * 3
-            draw.ellipse([x - rad, y - rad, x + rad, y + rad], fill=(255, 0, 0))
-            draw.text((x + rad + 6, y - rad), name, font=font, fill=(255, 255, 255),
+            rad = max(4, round(s * 1.4))
+            draw.ellipse([x - rad, y - rad, x + rad, y + rad], fill=(255, 0, 0), outline=(255, 255, 255), width=max(1, s // 2))
+            draw.text((x + rad + 5, y - rad), name, font=font, fill=(255, 255, 255),
                       stroke_width=2, stroke_fill=(0, 0, 0))
 
         if tpa_angle is not None:
             label = f"TPA: {tpa_angle:.1f}°"
-            draw.text((20, 20), label, font=get_font(max(24, annotated_image.width // 28)),
+            draw.text((20, 20), label, font=get_font(max(22, base // 35)),
                       fill=(56, 189, 248), stroke_width=3, stroke_fill=(0, 0, 0))
 
     buffer = io.BytesIO()

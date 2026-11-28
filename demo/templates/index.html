@@ -1,21 +1,67 @@
 {% extends "base.html" %}
 
-{% block title %}Prześlij zdjęcie{% endblock %}
+{% block title %}Kostek AI – Prześlij zdjęcie RTG{% endblock %}
 
 {% block content %}
-    <h1>Wyślij obraz do przetworzenia</h1>
-    <form action="/api/submit" method="post" enctype="multipart/form-data" class="upload-box">
-        <label for="model_name" style="text-align: left; font-size: 0.9rem; opacity: 0.85;">
-            Wybierz model detekcji:
-        </label>
-        <select name="model_name" id="model_name"
-                style="padding: 10px 12px; border-radius: 6px; background: #0f172a; color: var(--text-color); border: 1px solid var(--border);">
-            {% for m in models %}
-                <option value="{{ m.file }}">{{ m.label }}</option>
-            {% endfor %}
-        </select>
+    <h1>Analiza zdjęcia RTG</h1>
+    <p class="subtitle">Wybierz model detekcji i prześlij boczne zdjęcie piszczeli, aby wyznaczyć punkty P1–P4 oraz kąt TPA.</p>
 
-        <input type="file" name="file" accept="image/*" required>
-        <button type="submit">Przetwórz w pamięci</button>
+    <form id="uploadForm" action="/api/submit" method="post" enctype="multipart/form-data">
+        <div class="field">
+            <label for="model_name">Model detekcji (ONNX)</label>
+            <select name="model_name" id="model_name">
+                {% for m in models %}
+                    <option value="{{ m.file }}">{{ m.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="field">
+            <label>Zdjęcie RTG</label>
+            <div id="dropzone" class="dropzone">
+                <input id="fileInput" type="file" name="file" accept="image/*" required>
+                <div class="dropzone-icon">⬆</div>
+                <div class="dropzone-title">Kliknij lub przeciągnij zdjęcie RTG tutaj</div>
+                <div class="dropzone-hint">Obsługiwane formaty: PNG, JPG, WEBP, TIFF (bez zapisu na dysku)</div>
+            </div>
+
+            <div id="filePreview" class="file-preview">
+                <img id="previewThumb" src="" alt="Miniatura">
+                <div>
+                    <div id="previewName" style="font-weight: 600; font-size: 0.9rem;"></div>
+                    <div id="previewSize" class="points-note" style="margin: 2px 0 0;"></div>
+                </div>
+            </div>
+        </div>
+
+        <button id="submitBtn" type="submit" class="btn-full">Analizuj zdjęcie w pamięci</button>
     </form>
+
+    <script>
+        const input = document.getElementById("fileInput");
+        const dz = document.getElementById("dropzone");
+        const preview = document.getElementById("filePreview");
+        const thumb = document.getElementById("previewThumb");
+        const pName = document.getElementById("previewName");
+        const pSize = document.getElementById("previewSize");
+        const form = document.getElementById("uploadForm");
+        const btn = document.getElementById("submitBtn");
+
+        function showFile(file) {
+            if (!file) return;
+            pName.textContent = file.name;
+            pSize.textContent = (file.size / 1024).toFixed(0) + " KB";
+            thumb.src = URL.createObjectURL(file);
+            preview.classList.add("visible");
+        }
+
+        input.addEventListener("change", () => showFile(input.files[0]));
+        ["dragenter", "dragover"].forEach(ev => dz.addEventListener(ev, () => dz.classList.add("dragover")));
+        ["dragleave", "drop"].forEach(ev => dz.addEventListener(ev, () => dz.classList.remove("dragover")));
+
+        form.addEventListener("submit", () => {
+            btn.disabled = true;
+            btn.textContent = "Analizuję zdjęcie RTG…";
+        });
+    </script>
 {% endblock %}
