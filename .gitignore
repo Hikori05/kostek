@@ -1,15 +1,19 @@
+# Środowiska i cache Pythona
 venv/
 .venv/
 __pycache__/
 *.py[cod]
+
+# Dane medyczne, obrazy RTG, benchmarki i treningi (RODO / prawa autorskie)
+data/
+bench/
+runs/
 dataset/
 dataset.zip
 dat/
 dataset_clean/
 dataset_lines/
-data/*
-!data/*.py
-bench/
+
+# Prywatne notatki robocze
 TODO.md
 PLAN_ZMIAN.md
-

@@ -18,7 +18,7 @@ from ultralytics import YOLO
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True, help="ścieżka do dataset.yaml")
-    ap.add_argument("--model", default="data/yolo26s-pose.pt", help="bazowy model YOLO-pose")
+    ap.add_argument("--model", default="models/yolo26s-pose.pt", help="bazowy model YOLO-pose")
     ap.add_argument("--epochs", type=int, default=250)
     ap.add_argument("--imgsz", type=int, default=640)
     ap.add_argument("--batch", type=int, default=4)

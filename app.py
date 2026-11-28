@@ -8,10 +8,10 @@ from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from ultralytics.models.yolo.model import YOLO
 
-# Ustaw tak samo jak imgsz użyty przy treningu (domyślne 640 psuje dokładność punktów)
-IMGSZ = 1024
+# Ustaw tak samo jak imgsz użyty przy treningu (domyślne 640 psuje dokładność punktów przy 1024)
+IMGSZ = 640
 
-model = YOLO("./models/kostek-v5.pt")
+model = YOLO("./models/kostek-v5s.pt")
 
 app = FastAPI()
 
